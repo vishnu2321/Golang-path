@@ -21,6 +21,8 @@ type Contact struct {
 
 type ContactsSlice []Contact
 
+var ContactsMap = map[int]*Contact{}
+
 func (contacts *ContactsSlice) CreateContact() error {
 	r := bufio.NewReader(os.Stdin)
 	fmt.Println("To Create New Contact. Enter below details")
@@ -48,6 +50,7 @@ func (contacts *ContactsSlice) CreateContact() error {
 		Address: cleanString(AddStr),
 	}
 	*contacts = append(*contacts, newContact)
+	ContactsMap[id] = &newContact
 	fmt.Println("Contact created successfully.")
 	return nil
 }
@@ -66,6 +69,7 @@ func (contacts *ContactsSlice) UpdateContact(id int, newContact Contact) error {
 				(*contacts)[i].Address = cleanString(newContact.Address)
 			}
 			fmt.Printf("Update successful for contact with ID:%d\n", id)
+
 			return nil
 		}
 	}
@@ -87,6 +91,7 @@ func (contacts *ContactsSlice) DeleteContact(id int) error {
 		return errors.New("Contact with given id not found")
 	}
 	*contacts = append((*contacts)[:oldContactInd], (*contacts)[oldContactInd+1:]...)
+	delete(ContactsMap, id)
 	fmt.Printf("Delete successful for contact with ID:%d \n", id)
 	return nil
 }
@@ -102,6 +107,47 @@ func (contacts *ContactsSlice) ShowContacts() {
 		fmt.Printf(" PhoneNo:%s\n", contact.PhoneNo)
 		fmt.Printf(" Address:%s\n", contact.Address)
 	}
+}
+
+func (contacts *ContactsSlice) SearchContactWithDetails(name string, phno string) error {
+	if name == "" && phno == "" {
+		fmt.Println("Both Name and phno are empty to search for.")
+	}
+	ind := -1
+	for i, contact := range *contacts {
+		if (name != "" && phno != "") && (contact.Name == name && contact.PhoneNo == phno) {
+			ind = i
+			break
+		} else if name != "" && contact.Name == name {
+			ind = i
+			break
+		} else if phno != "" && contact.PhoneNo == phno {
+			ind = i
+			break
+		}
+	}
+	if ind == -1 {
+		return errors.New(`No contact found with given details Name:%s, PhoneNo: %s`)
+	}
+	fmt.Println("Found Contact")
+	fmt.Printf(" ID:%d\n", (*contacts)[ind].Id)
+	fmt.Printf(" Name:%s\n", (*contacts)[ind].Name)
+	fmt.Printf(" PhoneNo:%s\n", (*contacts)[ind].PhoneNo)
+	fmt.Printf(" Address:%s\n", (*contacts)[ind].Address)
+	return nil
+}
+
+func (contacts *ContactsSlice) SearchContactWithID(id int) error {
+	contact, ok := ContactsMap[id]
+	if !ok {
+		return errors.New("No contact with given id")
+	}
+	fmt.Println("Found Contact")
+	fmt.Printf(" ID:%d\n", contact.Id)
+	fmt.Printf(" Name:%s\n", contact.Name)
+	fmt.Printf(" PhoneNo:%s\n", contact.PhoneNo)
+	fmt.Printf(" Address:%s\n", contact.Address)
+	return nil
 }
 
 func cleanString(numStr string) string {
@@ -158,6 +204,37 @@ func ProcesOp(contacts *ContactsSlice, opNo string) error {
 		return contacts.DeleteContact(id)
 	case opNo == "4":
 		contacts.ShowContacts()
+	case opNo == "5":
+		fmt.Println("Search Contact with details")
+		fmt.Print("Enter the name for contact to be searched(enter to skip): ")
+		nameStr, err := r.ReadString('\n')
+		if err != nil {
+			return err
+		}
+		fmt.Print("Enter the Phone Number for contact to be searched(enter to skip): ")
+		phnoStr, err := r.ReadString('\n')
+		if err != nil {
+			return err
+		}
+		err = contacts.SearchContactWithDetails(cleanString(nameStr), cleanString(phnoStr))
+		if err != nil {
+			return err
+		}
+	case opNo == "6":
+		fmt.Println("Search Contact with ID")
+		fmt.Print("Enter the id for contact to be searched: ")
+		idStr, err := r.ReadString('\n')
+		if err != nil {
+			return err
+		}
+		if idStr == "" {
+			return errors.New("ID cannot be empty")
+		}
+		id, err := strconv.Atoi(cleanString(idStr))
+		if err != nil {
+			return err
+		}
+		contacts.SearchContactWithID(id)
 	}
 	return nil
 }
@@ -176,11 +253,10 @@ func main() {
 			Address: "Temp add",
 		},
 	}
-	// indexMap := map[int]Contact{}
 
 	for {
 		fmt.Print("\nOptions(0 to exit):")
-		fmt.Print("\n 1. Create Contact \n 2. Update Contact \n 3. Delete Contact\n 4. Show All Contacts\n")
+		fmt.Print("\n 1. Create Contact \n 2. Update Contact \n 3. Delete Contact\n 4. Show All Contacts\n 5. Search Contact with Details\n 6. Search Contact with ID\n")
 		fmt.Print("Select a option:")
 		userOptStr, err := reader.ReadString('\n')
 		if err != nil {
