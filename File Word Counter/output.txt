@@ -1,0 +1,4 @@
+Line count: 9
+Empty line count: 6
+Words count: 5
+Characters count: 44
